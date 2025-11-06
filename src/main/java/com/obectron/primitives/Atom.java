@@ -1,6 +1,6 @@
-package com.obectron;
+package com.obectron.primitives;
 
-public class Atom implements LispObject {
+public class Atom implements OspisObject {
 
     private final String value;
 

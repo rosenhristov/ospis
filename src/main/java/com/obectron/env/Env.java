@@ -1,18 +1,26 @@
-package com.obectron;
+package com.obectron.env;
+
+import com.obectron.exception.NotAFunctionException;
+import com.obectron.functions.Defn;
+import com.obectron.functions.Fn;
+import com.obectron.primitives.*;
+import com.obectron.primitives.Number;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.obectron.Bool.NIL;
-import static com.obectron.Bool.TRUE;
-import static com.obectron.Constants.*;
-import static java.util.Objects.isNull;
+import static com.obectron.primitives.Bool.NIL;
+import static com.obectron.primitives.Bool.TRUE;
+import static com.obectron.common.Constants.*;
 import static java.util.Objects.nonNull;
 
-public record Env(Map<String, LispObject> vars,
+public record Env(Map<String, OspisObject> vars,
                   Env parent) {
 
-    public LispObject lookup(String name) {
+    public OspisObject lookup(String name) {
+        if (name.startsWith(":")) {
+            return Keyword.of(name);
+        }
         if (vars.containsKey(name)) {
             return vars.get(name);
         }
@@ -22,11 +30,11 @@ public record Env(Map<String, LispObject> vars,
         return Atom.of(name); // free variable
     }
 
-    public void define(String name, LispObject value) {
+    public void define(String name, OspisObject value) {
         vars.put(name, value);
     }
 
-    public static LispObject eval(LispObject expr, Env env) {
+    public static OspisObject eval(OspisObject expr, Env env) {
         if (expr instanceof Atom atom) {
             return env.lookup(atom.getValue());
         }
@@ -35,10 +43,10 @@ public record Env(Map<String, LispObject> vars,
             return expr;
         }
 
-        LispObject operation = list.car();
+        OspisObject operation = list.car();
         if (!(operation instanceof Atom)) {
-            LispObject fn = eval(operation, env);
-            LispObject args = evalList((Cons) list.cdr(), env);
+            OspisObject fn = eval(operation, env);
+            OspisObject args = evalList((Cons) list.cdr(), env);
             return apply(fn, args);
         }
 
@@ -54,53 +62,42 @@ public record Env(Map<String, LispObject> vars,
             case CONS  -> Cons.of(eval(((Cons) list.cdr()).car(), env),
                                   eval(((Cons) ((Cons) list.cdr()).cdr()).car(), env));
             case COND  -> evalCond((Cons) list.cdr(), env);
-            case FN -> Fn.of(((Cons) list.cdr()).car(),
-                             ((Cons) ((Cons) list.cdr()).cdr()).car(),
-                             env);
-            case DEFN -> defn(list, env);
+            case FN -> Fn.parse(list, env);
+            case DEFN -> Defn.parse(list, env);
             case PLUS, MINUS, MULTIPLY, DIVIDE -> mathOperation(command, (Cons) list.cdr(), env);
 
             default -> apply(eval(list.car(), env), evalList(((Cons) list.cdr()), env));
         };
     }
 
-    public static LispObject apply(LispObject fn, LispObject args) {
+    public static OspisObject apply(OspisObject fn, OspisObject args) {
         if (fn instanceof Fn lambda) {
-            Map<String, LispObject> localVars = new HashMap<>();
-            LispObject paramList = lambda.getParams();
-            LispObject argList = args;
+            Map<String, OspisObject> localVars = new HashMap<>();
+            OspisObject paramList = lambda.getParams();
+            OspisObject argList = args;
             while (nonNull(paramList) && nonNull(argList)) {
                 Atom param = (Atom) ((Cons) paramList).car();
-                LispObject val = ((Cons) argList).car();
+                OspisObject val = ((Cons) argList).car();
                 localVars.put(param.getValue(), val);
                 paramList = ((Cons) paramList).cdr();
                 argList = ((Cons) argList).cdr();
             }
-            return eval(lambda.getBody(), new Env(localVars, lambda.getLexicalEnv()));
+            return eval(lambda.getBody(), new Env(localVars, lambda.getLexicalScope()));
         }
         throw new NotAFunctionException("Not a function: " + fn);
     }
 
-    public static LispObject evalList(Cons list, Env env) {
+    public static OspisObject evalList(Cons list, Env env) {
         return nonNull(list)
                 ? Cons.of(eval(list.car(), env),
                           evalList((Cons) list.cdr(), env))
                 : null;
     }
 
-    private static Atom defn(Cons list, Env env) {
-        String name = ((Atom) ((Cons) list.cdr()).car()).getValue();
-        LispObject args = ((Cons) ((Cons) list.cdr()).cdr()).car();
-        LispObject body = ((Cons) ((Cons) ((Cons) list.cdr()).cdr()).cdr()).car();
-        Fn fn = Fn.of(args, body, env);
-        env.define(name, fn);
-        return Atom.of(name);
-    }
-
-    public static LispObject evalCond(Cons clauses, Env env) {
-        for (LispObject cons = clauses; nonNull(cons); cons = ((Cons) cons).cdr()) {
+    public static OspisObject evalCond(Cons clauses, Env env) {
+        for (OspisObject cons = clauses; nonNull(cons); cons = ((Cons) cons).cdr()) {
             Cons clause = (Cons) ((Cons) cons).car();
-            LispObject evaluation = eval(clause.car(), env);
+            OspisObject evaluation = eval(clause.car(), env);
             if (nonNull(evaluation) && !NIL.name().equals(evaluation.toString())) {
                 return eval(((Cons) clause.cdr()).car(), env);
             }
@@ -108,13 +105,11 @@ public record Env(Map<String, LispObject> vars,
         return Atom.of(NIL.name());
     }
 
-    public static LispObject atom(LispObject x) {
-        return (isNull(x) || isAtom(x))
-                ? Atom.of(TRUE.name())
-                : Atom.of(NIL.name());
+    public static OspisObject atom(OspisObject x) {
+        return x.isAtom() ? Atom.of(TRUE.name()) : Atom.of(NIL.name());
     }
 
-    public static LispObject eq(LispObject paramA, LispObject paramB) {
+    public static OspisObject eq(OspisObject paramA, OspisObject paramB) {
         if (paramA instanceof Atom atomA
                 && paramB instanceof Atom atomB
                 && atomA.getValue().equals(atomB.getValue())) {
@@ -123,18 +118,18 @@ public record Env(Map<String, LispObject> vars,
         return Atom.of(NIL.name());
     }
 
-    public static LispObject list(LispObject... elements) {
-        LispObject result = null;
+    public static OspisObject list(OspisObject... elements) {
+        OspisObject result = null;
         for (int i = elements.length - 1; i >= 0; i--) {
             result = Cons.of(elements[i], result);
         }
         return result;
     }
 
-    public static LispObject mathOperation(String operator, Cons args, Env env) {
-        double result = ((NumberAtom) eval(args.car(), env)).getNumber();
-        for (LispObject rest = args.cdr(); nonNull(rest); rest = ((Cons) rest).cdr()) {
-            double num = ((NumberAtom) eval(((Cons) rest).car(), env)).getNumber();
+    public static OspisObject mathOperation(String operator, Cons args, Env env) {
+        double result = ((Number) eval(args.car(), env)).getNumber();
+        for (OspisObject rest = args.cdr(); nonNull(rest); rest = ((Cons) rest).cdr()) {
+            double num = ((Number) eval(((Cons) rest).car(), env)).getNumber();
             switch (operator) {
                 case "+" -> result += num;
                 case "-" -> result -= num;
@@ -143,17 +138,6 @@ public record Env(Map<String, LispObject> vars,
                 default -> throw new IllegalArgumentException("Unknown operator: " + operator);
             }
         }
-        return NumberAtom.of(Double.toString(result));
+        return Number.of(Double.toString(result));
     }
-
-    public static Atom atomOrNumber(String s) {
-        return s.matches("-?\\d+(\\.\\d+)?")
-                ? NumberAtom.of(s)
-                : Atom.of(s);
-    }
-
-    public static boolean isAtom(LispObject x) {
-        return x instanceof Atom;
-    }
-
 }

@@ -1,4 +1,4 @@
-package com.obectron;
+package com.obectron.primitives;
 
 public enum Bool {
     TRUE("true"), NIL("nil");

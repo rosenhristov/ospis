@@ -1,4 +1,4 @@
-package com.obectron;
+package com.obectron.common;
 
 public enum BaseCommand {
     QUOTE("quote"),

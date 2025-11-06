@@ -1,16 +1,16 @@
-package com.obectron;
+package com.obectron.primitives;
 
-public class NumberAtom extends Atom {
+public class Number extends Atom {
 
     final double number;
 
-    private NumberAtom(String value) {
+    private Number(String value) {
         super(value);
         this.number = Double.parseDouble(value);
     }
 
-    public static NumberAtom of(String value) {
-        return new NumberAtom(value);
+    public static Number of(String value) {
+        return new Number(value);
     }
 
     public String toString() {

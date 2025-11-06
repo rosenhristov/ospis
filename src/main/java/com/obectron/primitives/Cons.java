@@ -1,29 +1,29 @@
-package com.obectron;
+package com.obectron.primitives;
 
-import static com.obectron.Constants.EMPTY_STRING;
-import static com.obectron.Constants.SPACE;
+import static com.obectron.common.Constants.EMPTY_STRING;
+import static com.obectron.common.Constants.SPACE;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
-public class Cons implements LispObject {
+public class Cons implements OspisObject {
 
-    private LispObject car;
-    private LispObject cdr;
+    private OspisObject car;
+    private OspisObject cdr;
 
-    private Cons(LispObject car, LispObject cdr) {
+    private Cons(OspisObject car, OspisObject cdr) {
         this.car = car;
         this.cdr = cdr;
     }
 
-    public static Cons of(LispObject car, LispObject cdr) {
+    public static Cons of(OspisObject car, OspisObject cdr) {
         return new Cons(car, cdr);
     }
 
-    public LispObject car() {
+    public OspisObject car() {
         return car;
     }
 
-    public LispObject cdr() {
+    public OspisObject cdr() {
         return cdr;
     }
 
@@ -31,7 +31,7 @@ public class Cons implements LispObject {
         return String.format("(%s)", toStr(this));
     }
 
-    private String toStr(LispObject obj) {
+    private String toStr(OspisObject obj) {
         if (isNull(obj)) {
             return EMPTY_STRING;
         }
@@ -45,11 +45,11 @@ public class Cons implements LispObject {
         return obj.toString();
     }
 
-    public void setCar(LispObject cell) {
+    public void setCar(OspisObject cell) {
         this.car = cell;
     }
 
-    public void setCdr(LispObject cell) {
+    public void setCdr(OspisObject cell) {
         this.cdr = cell;
     }
 }

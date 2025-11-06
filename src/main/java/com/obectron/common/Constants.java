@@ -1,4 +1,4 @@
-package com.obectron;
+package com.obectron.common;
 
 public interface Constants {
 
@@ -19,4 +19,9 @@ public interface Constants {
     String MINUS = "-";
     String MULTIPLY = "*";
     String DIVIDE = "/";
+
+    String COLON = ":";
+
+    char OPEN_BRACKET = '(';
+    char CLOSE_BRACKET = ')';
 }
